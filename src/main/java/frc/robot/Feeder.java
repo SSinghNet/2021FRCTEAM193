@@ -9,19 +9,19 @@ import edu.wpi.first.wpilibj.XboxController;
 //Joshua 
 public class Feeder{
 
-XboxController eeController; 
-CANSparkMax feederNeo;
-CANSparkMax towerNeo;
-DigitalInput opticalSensor;
+    XboxController eeController; 
+    CANSparkMax feederNeo;
+    CANSparkMax towerNeo;
+    DigitalInput opticalSensor;
 
-public Feeder(XboxController eeController1, CANSparkMax feederNeo1, CANSparkMax towerNeo1, DigitalInput opticalSensor){
-    eeController = eeController1;
-    feederNeo = feederNeo1;
-    towerNeo = towerNeo1;
-}
+    public Feeder(XboxController eeController1, CANSparkMax feederNeo1, CANSparkMax towerNeo1, DigitalInput opticalSensor){
+        eeController = eeController1;
+        feederNeo = feederNeo1;
+        towerNeo = towerNeo1;
+    }
 
-boolean bumperPressed = false;
-// The feeder turns on when the right bumper is pressed down
+    boolean bumperPressed = false;
+    // The feeder turns on when the right bumper is pressed down
     public void FeederController(){
         if(eeController.getBumper(Hand.kRight)){
             towerNeo.set(-0.4);
@@ -32,6 +32,5 @@ boolean bumperPressed = false;
                 towerNeo.set(0);
             }
         }
-
     }
 }
