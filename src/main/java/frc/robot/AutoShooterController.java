@@ -31,17 +31,18 @@ public class AutoShooterController {
     CANPIDController flywheelPIDController;
     NetworkTable table;
     NetworkTableEntry pipe;
-	NetworkTableEntry ledMode;
-	NetworkTableEntry tx;
-	NetworkTableEntry ty;
-	NetworkTableEntry ta;
-	NetworkTableEntry tv;
+    NetworkTableEntry ledMode;
+    NetworkTableEntry tx;
+    NetworkTableEntry ty;
+    NetworkTableEntry ta;
+    NetworkTableEntry tv;
     double x, y, area, isTarget, modeLed, pipeLine, flywheelRPM;
 
     Spark RGBController;
 
-
-    public AutoShooterController(Servo hoodServoRobot, CANSparkMax flywheelNeoRobot, TalonSRX turret775Robot, XboxController theControllerRobot, double turretPosRobot, CANPIDController flywheelPIDControllerIN, CANEncoder flywheelEncoderIN, double flywheelRPMIN, Spark RGBControllerIN) {
+    public AutoShooterController(Servo hoodServoRobot, CANSparkMax flywheelNeoRobot, TalonSRX turret775Robot,
+            XboxController theControllerRobot, double turretPosRobot, CANPIDController flywheelPIDControllerIN,
+            CANEncoder flywheelEncoderIN, double flywheelRPMIN, Spark RGBControllerIN) {
         hoodServo = hoodServoRobot;
         flywheelNeo = flywheelNeoRobot;
         turret775 = turret775Robot;
@@ -53,28 +54,28 @@ public class AutoShooterController {
         RGBController = RGBControllerIN;
     }
 
-    public void shooterController(){
+    public void shooterController() {
 
-        if(theController.getAButton()){
+        if (theController.getAButton()) {
             startButtonPressed = true;
         }
-        if(theController.getBButton()){
+        if (theController.getBButton()) {
             startButtonPressed = false;
         }
 
-        if (startButtonPressed){
-            //tracking&flywheel     
+        if (startButtonPressed) {
+            // tracking&flywheel
             startTrackingFlywheel(pipe, x, y);
         }
-        if(!startButtonPressed){
-            //INSERT DEFAULT POSITION HERE
+        if (!startButtonPressed) {
+            // INSERT DEFAULT POSITION HERE
             stopTrackingFlywheel(pipe);
             trackingStopped = true;
-        }         
+        }
     }
 
-    public void LimeLightInit(){
-        //get values from limelight 
+    public void LimeLightInit() {
+        // get values from limelight
         table = NetworkTableInstance.getDefault().getTable("limelight");
         ledMode = table.getEntry("ledMode");
         tx = table.getEntry("tx");
@@ -85,7 +86,7 @@ public class AutoShooterController {
 
         NetworkTableInstance.getDefault().getTable("limelight").getEntry("stream").setNumber(1);
 
-        //read values periodically
+        // read values periodically
         x = tx.getDouble(0.0);
         y = ty.getDouble(0.0);
         area = ta.getDouble(0.0);
@@ -93,7 +94,7 @@ public class AutoShooterController {
         modeLed = ledMode.getDouble(0.0);
         pipeLine = pipe.getDouble(0);
 
-        //post to smart dashboard periodically
+        // post to smart dashboard periodically
         SmartDashboard.putNumber("LimelightX", x);
         SmartDashboard.putNumber("LimelightY", y);
         SmartDashboard.putNumber("LimelightArea", area);
@@ -103,52 +104,52 @@ public class AutoShooterController {
         SmartDashboard.putString("LimeLightIsTracking", isTracking);
     }
 
-    public void startTrackingFlywheel(NetworkTableEntry pipe, double x, double y){
+    public void startTrackingFlywheel(NetworkTableEntry pipe, double x, double y) {
         LimeLightInit();
 
-        //set up PIDcontroller
+        // set up PIDcontroller
         flywheelPIDController = flywheelNeo.getPIDController();
-        
-        //use encoder to display info about flywheel on smart dashboard
+
+        // use encoder to display info about flywheel on smart dashboard
         flywheelEncoder = flywheelNeo.getEncoder();
         SmartDashboard.putNumber("ProcessVariable", flywheelEncoder.getVelocity());
         flywheelPIDController.setReference(flywheelRPM, ControlType.kVelocity);
 
-        
         pipe.setValue(2);
         isTracking = "true";
-        //double autoServoAngle = (((-0.08769747858077814318 * (Math.pow(y, 2))) + (0.75133342164053162904 * y)) + 31.25005372095953504186);
-        double autoServoAngle = (0.00138821715630382814 * Math.pow(y, 3)) + (-0.12659498575584260394 * Math.pow(y, 2)) + ((0.87692723545402051499 * y)) + (31.81212577091250892636);
-        if(autoServoAngle < 0){
+        // double autoServoAngle = (((-0.08769747858077814318 * (Math.pow(y, 2))) +
+        // (0.75133342164053162904 * y)) + 31.25005372095953504186);
+        double autoServoAngle = (0.00138821715630382814 * Math.pow(y, 3)) + (-0.12659498575584260394 * Math.pow(y, 2))
+                + ((0.87692723545402051499 * y)) + (31.81212577091250892636);
+        if (autoServoAngle < 0) {
             autoServoAngle = 0;
-        }else if(autoServoAngle > 65){
+        } else if (autoServoAngle > 65) {
             autoServoAngle = 65;
         }
 
-        turret775.set(ControlMode.Position, (turret775.getSelectedSensorPosition() + (x *3.75)));         
+        turret775.set(ControlMode.Position, (turret775.getSelectedSensorPosition() + (x * 3.75)));
         hoodServo.setAngle(autoServoAngle);
 
-        if((x > -1 && x < 1) && (y > -1 && y < 1)){
-            //lightColorChanges
+        if ((x > -1 && x < 1) && (y > -1 && y < 1)) {
+            // lightColorChanges
             RGBController.set(0.71);
-            System.out.println("====ready to shoot====");
-        }else if((x < -1 || x > 1) && (y < -1 || y > 1)){
+            // System.out.println("====ready to shoot====");
+        } else if ((x < -1 || x > 1) && (y < -1 || y > 1)) {
             RGBController.set(0.03);
         }
     }
 
-    public void stopTrackingFlywheel(NetworkTableEntry pipe){
+    public void stopTrackingFlywheel(NetworkTableEntry pipe) {
         LimeLightInit();
-        if(trackingStopped){
-            turret775.set(ControlMode.Position, 502); 
+        if (trackingStopped) {
+            turret775.set(ControlMode.Position, 502);
             hoodServo.setAngle(0);
             RGBController.set(0.61);
-            System.out.println("==tracking stopped==");
+            // System.out.println("==tracking stopped==");
             trackingStopped = false;
             flywheelNeo.set(0);
         }
-        
-        
+
         pipe.setValue(1);
         isTracking = "false";
     }
