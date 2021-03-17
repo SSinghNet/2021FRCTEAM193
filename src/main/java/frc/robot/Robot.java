@@ -1,16 +1,14 @@
-/*----------------------------------------------------------------------------*/
-/* Copyright (c) 2017-2018 FIRST. All Rights Reserved.                                                */
-/* Open Source Software - may be modified and shared by FRC teams. The code     */
-/* must be accompanied by the FIRST BSD license file in the root directory of */
-/* the project.                                                                                                                             */
-/*----------------------------------------------------------------------------*/
 
 package frc.robot;
 
+import java.nio.file.Path;
+
+import com.analog.adis16470.frc.ADIS16470_IMU;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.CANEncoder;
 import com.revrobotics.CANPIDController;
 import com.revrobotics.CANSparkMax;
@@ -19,31 +17,37 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
+import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Spark;
+import edu.wpi.first.wpilibj.SpeedController;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
-import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.interfaces.Gyro;
+import edu.wpi.first.wpilibj.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.wpilibj.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
+import edu.wpi.first.wpilibj.simulation.AnalogGyroSim;
+import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
+import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.system.plant.DCMotor;
+import edu.wpi.first.wpilibj.trajectory.Trajectory;
+import edu.wpi.first.wpilibj.trajectory.TrajectoryUtil;
 
-/**
- * The VM is configured to automatically run this class, and to call the
- * functions corresponding to each mode, as described in the TimedRobot
- * documentation. If you change the name of this class or the package after
- * creating this project, you must also update the build.gradle file in the
- * project.
- */
 public class Robot extends TimedRobot {
     private static final String kDefaultAuto = "Default";
     private static final String kMoveFowardAuto = "Move Foward";
@@ -53,8 +57,7 @@ public class Robot extends TimedRobot {
     private String m_autoSelected;
     private final SendableChooser<String> m_chooser = new SendableChooser<>();
 
-    private final Field2d m_field = new Field2d();
-    private final DifferentialDriveOdometry m_odometry = new DifferentialDriveOdometry(new Rotation2d());
+
 
     Joystick rightJoystick = new Joystick(0);
     Joystick leftJoystick = new Joystick(1);
@@ -113,6 +116,38 @@ public class Robot extends TimedRobot {
     AutoShooterController theAutoShooterController = new AutoShooterController(hoodServo, sparkMFlywheelNeo,
             srxTurret775, theController, turretPos, flywheelPIDController, flywheelEncoder, flywheelRPM, RGBController);
 
+    //pathweaver
+    public static final double ksVolts = 0.22;
+    public static final double kvVoltSecondsPerMeter = 1.98;
+    public static final double kaVoltSecondsSquaredPerMeter = 0.2;
+    public static final double kPDriveVel = 8.5;
+    public static final double kTrackwidthMeters = 0.69;
+    public static final DifferentialDriveKinematics kDriveKinematics = new DifferentialDriveKinematics(kTrackwidthMeters);
+    public static final double kMaxSpeedMetersPerSecond = 3;
+    public static final double kMaxAccelerationMetersPerSecondSquared = 3;
+    public static final double kRamseteB = 2;
+    public static final double kRamseteZeta = 0.7;
+    private final SpeedControllerGroup m_leftMotors = new SpeedControllerGroup(new WPI_TalonFX(1), new WPI_TalonFX(2));
+    private final SpeedControllerGroup m_rightMotors = new SpeedControllerGroup(new WPI_TalonFX(3), new WPI_TalonFX(4));
+
+    // SIMULATOR
+    private final Field2d m_field = new Field2d();
+    private Gyro m_gyro = new ADIS16470_IMU();
+    private final DifferentialDriveOdometry m_odometry = new DifferentialDriveOdometry(m_gyro.getRotation2d());
+    private Encoder m_leftEncoder = new Encoder(5, 6);
+    private Encoder m_rightEncoder = new Encoder(7, 8);
+    private EncoderSim m_leftEncoderSim = new EncoderSim(m_leftEncoder);
+    private EncoderSim m_rightEncoderSim = new EncoderSim(m_rightEncoder);
+    private AnalogGyroSim m_gyroSim = new AnalogGyroSim((AnalogGyro) m_gyro);
+    DifferentialDrivetrainSim m_driveSim = new DifferentialDrivetrainSim(
+        DCMotor.getFalcon500(2), // 2 Falcon motors on each side of the drivetrain.
+        10.4, // gearing reduction.
+        7.5, // MOI of 7.5 kg m^2 (from CAD model).
+        60.0, // The mass of the robot is 60 kg.
+        3.0, // The robot uses 3" radius wheels.
+        0.7112, // The track width is 0.7112 meters.
+        null);
+
     /**
      * This function is run when the robot is first started up and should be used
      * for any initialization code.
@@ -138,6 +173,15 @@ public class Robot extends TimedRobot {
         srxTurret775.set(ControlMode.Position, 502);
 
         theAutoShooterController.LimeLightInit();
+
+        String trajectoryJSON = "paths/Test.path";
+        Trajectory trajectory = new Trajectory();
+        try {
+            Path trajectoryPath = Filesystem.getDeployDirectory().toPath().resolve(trajectoryJSON);
+            trajectory = TrajectoryUtil.fromPathweaverJson(trajectoryPath);
+        } catch (Exception e) {
+            System.out.println("Unable to open trajectory: " + trajectoryJSON + "\n" + e.getStackTrace());
+        }
     }
 
     /**
@@ -153,6 +197,16 @@ public class Robot extends TimedRobot {
     public void robotPeriodic() {
         SmartDashboard.putData("Field", m_field);
         m_field.setRobotPose(m_odometry.getPoseMeters());
+        m_odometry.update(m_gyro.getRotation2d(),
+                    m_leftEncoder.getDistance(),
+                    m_rightEncoder.getDistance());
+        m_field.setRobotPose(m_odometry.getPoseMeters());
+        m_leftEncoder.setDistancePerPulse(1);
+        m_rightEncoder.setDistancePerPulse(1);
+
+        m_leftEncoder.reset();
+        m_rightEncoder.reset();
+        m_odometry.update(m_gyro.getRotation2d(), m_leftEncoder.getDistance(), m_rightEncoder.getDistance());
     }
 
     /**
@@ -223,6 +277,39 @@ public class Robot extends TimedRobot {
         theIntake.PowerCellRollerIntakeJoystick();
     }
 
+
+    public void simulationPeriodic() {
+
+        m_leftEncoder.setDistancePerPulse(2 * Math.PI * 5 /*Wheel Radius*/ / 5/*EncoderResolution*/);
+        m_rightEncoder.setDistancePerPulse(2 * Math.PI * 5 /*Wheel Radius*/  / 5/*EncoderResolution*/);
+
+        // Set the inputs to the system. Note that we need to convert
+        // the [-1, 1] PWM signal to voltage by multiplying it by the
+        // robot controller voltage.
+        if (theController.getRawAxis(1) > 0.5 || theController.getRawAxis(1) < -.5) {
+            m_driveSim.setInputs(theController.getRawAxis(1)* -1 , 0);
+        } else if (theController.getRawAxis(1) < 0.5 && theController.getRawAxis(1) > -.5) {
+            m_driveSim.setInputs(0, 0);
+        }
+        if (theController.getRawAxis(5) > 0.5 || theController.getRawAxis(5) < -.5) {
+            m_driveSim.setInputs(0, theController.getRawAxis(1)* -1);
+        } else if(theController.getRawAxis(5) < 0.5 && theController.getRawAxis(5) > -.5)  {
+            m_driveSim.setInputs(0, 0);
+        }
+        
+
+        // Advance the model by 20 ms. Note that if you are running this
+        // subsystem in a separate thread or have changed the nominal timestep
+        // of TimedRobot, this value needs to match it.
+        m_driveSim.update(0.02);
+
+        // Update all of our sensors.
+        m_leftEncoderSim.setDistance(m_driveSim.getLeftPositionMeters());
+        m_leftEncoderSim.setRate(m_driveSim.getLeftVelocityMetersPerSecond());
+        m_rightEncoderSim.setDistance(m_driveSim.getRightPositionMeters());
+        m_rightEncoderSim.setRate(m_driveSim.getRightVelocityMetersPerSecond());
+        m_gyroSim.setAngle(-m_driveSim.getHeading().getDegrees());
+    }
     /**
      * This function is called periodically during test mode.
      */

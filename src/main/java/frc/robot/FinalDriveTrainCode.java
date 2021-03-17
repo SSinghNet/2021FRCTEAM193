@@ -7,12 +7,11 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.GenericHID.Hand;
-
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
+
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.XboxController;
 
 public class FinalDriveTrainCode {
     TalonFX Falcon1;
@@ -36,30 +35,18 @@ public class FinalDriveTrainCode {
 
     public void DriveTrain() {
 
-        // if (RightJoystick.getY() > 0.5 || RightJoystick.getY() < -0.5) {
-        // Falcon1.set(ControlMode.PercentOutput, RightJoystick.getY());
-        // System.out.println("RightJoystick");
-        // } else {
-        // Falcon1.set(ControlMode.PercentOutput, 0);
-        // }
-        // if (LeftJoystick.getY() > 0.5 || LeftJoystick.getY() < -.5) {
-        // Falcon3.set(ControlMode.PercentOutput, -LeftJoystick.getY());
-        // System.out.println("LeftJoystick");
-        // } else {
-        // Falcon3.set(ControlMode.PercentOutput, 0);
-        // }
-
-        if (theController.getRawAxis(1) > 0.5 || theController.getRawAxis(1) < -.5) {
-            Falcon1.set(ControlMode.PercentOutput, -1 * theController.getRawAxis(1));
-        } else if (theController.getStickButtonReleased(Hand.kLeft)) {
+        if (RightJoystick.getY() > 0.5 || RightJoystick.getY() < -0.5) {
+            Falcon1.set(ControlMode.PercentOutput, RightJoystick.getY());
+        } else {
             Falcon1.set(ControlMode.PercentOutput, 0);
         }
-        if (theController.getRawAxis(5) > 0.5 || theController.getRawAxis(5) < -.5) {
-            Falcon3.set(ControlMode.PercentOutput, -1 * theController.getRawAxis(5));
-
-        } else if (theController.getStickButtonReleased(Hand.kRight)) {
+        if (LeftJoystick.getY() > 0.5 || LeftJoystick.getY() < -.5) {
+            Falcon3.set(ControlMode.PercentOutput, -LeftJoystick.getY());
+        } else {
             Falcon3.set(ControlMode.PercentOutput, 0);
         }
+
+
 
     }
 }
