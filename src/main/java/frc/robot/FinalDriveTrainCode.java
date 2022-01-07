@@ -37,14 +37,14 @@ public class FinalDriveTrainCode{
 
         
         if(RightJoystick.getY() > 0.5 || RightJoystick.getY() < -0.5){
-            Falcon1.set(ControlMode.PercentOutput, RightJoystick.getY());
+            Falcon1.set(ControlMode.PercentOutput, RightJoystick.getY() / 5);
 
         }else{
             Falcon1.set(ControlMode.PercentOutput, 0);
         }
 
         if(LeftJoystick.getY() > 0.5 || LeftJoystick.getY() < -.5){
-            Falcon3.set(ControlMode.PercentOutput, -LeftJoystick.getY());
+            Falcon3.set(ControlMode.PercentOutput, -LeftJoystick.getY() / 5);
         }else{
             Falcon3.set(ControlMode.PercentOutput, 0);
         }
